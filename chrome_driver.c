@@ -26,6 +26,221 @@
 #include "chrome.h"
 #include "chrome_io.h"
 
+/*
+ *
+ * FB driver initialisation.
+ *
+ */
+
+/*
+ * Store the full VGA/textmode state for later restoration.
+ */
+static void
+chrome_textmode_store(struct chrome_info *info)
+{
+	struct chrome_state *state = &info->state;
+	int i;
+
+	memset(state, 0, sizeof(struct chrome_state));
+
+	/* Don't bother with a synchronous reset, we're not touching anything */
+
+	/* CR registers */
+	for (i = 0x00; i < 0x1E; i++)
+		state->CR[i] = chrome_vga_cr_read(info, i);
+	/* 0x1E - 0x32: unused */
+	for (i = 0x33; i < 0xA3; i++)
+		state->CR[i] = chrome_vga_cr_read(info, i);
+
+	/* SR registers */
+	for (i = 0x00; i < 0x05; i++)
+		state->SR[i] = chrome_vga_seq_read(info, i);
+	/* 05 - 0x0F: unused */
+	for (i = 0x10; i < 0x50; i++)
+		state->SR[i] = chrome_vga_seq_read(info, i);
+
+	/* Graph registers */
+	for (i = 0x00; i < 0x08; i++)
+		state->GR[i] = chrome_vga_graph_read(info, i);
+
+	/* Attribute registers */
+	for (i = 0x00; i < 0x14; i++)
+		state->AR[i] = chrome_vga_attr_read(info, i);
+
+	state->Misc = chrome_vga_misc_read(info);
+
+	/* store VGA memory? */
+	if (!(state->AR[0x10] & 0x01)) { /* don't bother when in graphics mode */
+		/* four planes, two are font data, two are text */
+		state->planes = (unsigned char *) vmalloc(4 * VGA_FB_PLANE_SIZE);
+
+		if (state->planes)
+			/* Cheat: just grab the lowest 256kB from already mapped FB */
+			memcpy(state->planes, info->fbbase, 4 * VGA_FB_PLANE_SIZE);
+		else
+			printk(KERN_ERR "Unable to store VGA FB planes.\n");
+	}
+
+	/* store palette */
+	chrome_vga_dac_read_address(info, 0x00);
+	for (i = 0; i < 0x100; i++) {
+		state->palette[i].red = chrome_vga_dac_read(info);
+		state->palette[i].green = chrome_vga_dac_read(info);
+		state->palette[i].blue = chrome_vga_dac_read(info);
+	}
+}
+
+/*
+ * Restore the saved VGA/textmode state.
+ */
+static void
+chrome_textmode_restore(struct chrome_info *info)
+{
+	struct chrome_state *state = &info->state;
+	int i;
+
+	/* Synchronous reset */
+	chrome_vga_seq_mask(info, 0x00, 0x00, 0x02);
+
+	/* CR registers */
+	for (i = 0x00; i < 0x1E; i++)
+		chrome_vga_cr_write(info, i, state->CR[i]);
+	/* 0x1E - 0x32: unused */
+	for (i = 0x33; i < 0xA3; i++)
+		chrome_vga_cr_write(info, i, state->CR[i]);
+
+	/* SR registers */
+	chrome_vga_seq_write(info, 0x00, state->SR[0x00] & 0xFD);
+	for (i = 0x01; i < 0x05; i++)
+		chrome_vga_seq_write(info, i, state->SR[i]);
+	/* 05 - 0x0F: unused */
+	for (i = 0x10; i < 0x50; i++)
+		chrome_vga_seq_write(info, i, state->SR[i]);
+
+	/* Graph registers */
+	for (i = 0x00; i < 0x08; i++)
+		chrome_vga_graph_write(info, i, state->GR[i]);
+
+	/* Attribute registers */
+	for (i = 0x00; i < 0x14; i++)
+		chrome_vga_attr_write(info, i, state->AR[i]);
+
+	/* Restore FB */
+	if (state->planes)
+		memcpy(info->fbbase, state->planes, 4 * VGA_FB_PLANE_SIZE);
+
+	/* Restore palette */
+	chrome_vga_dac_write_address(info, 0x00);
+	for (i = 0; i < 0x100; i++) {
+		chrome_vga_dac_write(info, state->palette[i].red);
+		chrome_vga_dac_write(info, state->palette[i].green);
+		chrome_vga_dac_write(info, state->palette[i].blue);
+	}
+
+	/* Reset clock */
+	chrome_vga_seq_mask(info, 0x40, 0x06, 0x06);
+	chrome_vga_seq_mask(info, 0x40, 0x00, 0x06);
+
+	chrome_vga_misc_write(info, state->Misc);
+
+	/* Synchronous reset disable */
+	chrome_vga_seq_mask(info, 0x00, 0x02, 0x02);
+}
+
+/*
+ *
+ */
+static int
+chrome_open(struct fb_info *fb_info, int user)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+	int count;
+
+	count = atomic_read(&info->fb_ref_count);
+    
+	if (!count)
+		chrome_textmode_store(info);
+
+	atomic_inc(&info->fb_ref_count);
+
+	return 0;
+}
+
+/*
+ *
+ */
+static int
+chrome_release(struct fb_info *fb_info, int user)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+	int count;
+
+	count = atomic_read(&info->fb_ref_count);
+
+	if (!count)
+		return -EINVAL;
+
+	if (count == 1)
+		chrome_textmode_restore(info);
+
+	atomic_dec(&info->fb_ref_count);
+
+	return 0;
+}
+
+/*
+ *
+ */
+static int
+chrome_check_var(struct fb_var_screeninfo *var, struct fb_info *fb_info)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+
+        /* call chrome_mode_valid(info, mode); */
+
+        return 0;
+}
+
+#ifdef UNUSED
+/*
+ * Sync 2D engine.
+ */
+static int
+chrome_sync(struct fb_info *fb_info)
+{
+	/* not using 2D engine yet. */
+	return 0;
+}
+#endif
+
+/*
+ * FB driver callbacks.
+ */
+static struct fb_ops chrome_ops __devinitdata = {
+	.owner =  THIS_MODULE,
+	.fb_open =  chrome_open,
+	.fb_release =  chrome_release,
+	.fb_check_var =  chrome_check_var,
+#if 0
+	.fb_set_par =  chrome_set_par,
+	.fb_setcolreg =  chrome_setcolreg,
+	.fb_blank =  chrome_blank,
+	.fb_pan_display =  chrome_pan_display, 
+	.fb_fillrect =  chrome_fillrect,
+	.fb_copyarea =  chrome_copyarea,
+	.fb_imageblit =  chrome_imageblit,
+	.fb_cursor =  chrome_cursor,
+	.fb_sync =  chrome_sync,
+#endif
+};
+
+
+/*
+ *
+ * Driver module initialisation.
+ *
+ */
+
 #ifdef MODULE
 
 MODULE_AUTHOR("(c) 2003-2006 by Luc Verhaegen (libv@skynet.be)");

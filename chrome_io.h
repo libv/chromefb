@@ -39,4 +39,22 @@ void chrome_vga_enable_write(struct chrome_info *info, unsigned char value);
 void chrome_vga_enable_mask(struct chrome_info *info, unsigned char value,
                             unsigned char mask);
 
+unsigned char chrome_vga_graph_read(struct chrome_info *info, unsigned char index);
+void chrome_vga_graph_write(struct chrome_info *info, unsigned char index,
+                            unsigned char value);
+void chrome_vga_graph_mask(struct chrome_info *info, unsigned char index,
+                           unsigned char value, unsigned char mask);
+
+unsigned char chrome_vga_attr_read(struct chrome_info *info, unsigned char index);
+void chrome_vga_attr_write(struct chrome_info *info, unsigned char index,
+                           unsigned char value);
+void chrome_vga_attr_mask(struct chrome_info *info, unsigned char index,
+                          unsigned char value, unsigned char mask);
+
+void chrome_vga_dac_mask_write(struct chrome_info *info, unsigned char value);
+void chrome_vga_dac_read_address(struct chrome_info *info, unsigned char value);
+void chrome_vga_dac_write_address(struct chrome_info *info, unsigned char value);
+void chrome_vga_dac_write(struct chrome_info *info, unsigned char value);
+unsigned char chrome_vga_dac_read(struct chrome_info *info);
+
 #endif /* HAVE_CHROMEFB_IO_H */

@@ -40,6 +40,29 @@
 #define PCI_CHIP_VT3371 0x3371 /* Chrome 9: P4M900 */
 
 /*
+ * Stores the full textmode state.
+ */
+struct chrome_state {
+    /* VGA registers + extensions */
+    unsigned char CR[0xA2];
+    unsigned char SR[0x1D];
+    unsigned char GR[0x08];
+    unsigned char AR[0x14];
+    unsigned char Misc;
+
+    /* all four 4 VGA FB planes (0xA0000) */
+#define VGA_FB_PLANE_SIZE 64*1024
+    unsigned char *planes;
+
+    /* DAC */
+    struct {
+        unsigned char red;
+        unsigned char green;
+        unsigned char blue;
+    } palette[0x100];
+};
+
+/*
  * Holds all our information.
  */
 struct chrome_info {
@@ -53,6 +76,10 @@ struct chrome_info {
     unsigned int  fbsize;
 
     void __iomem  *iobase;
+
+    atomic_t  fb_ref_count;
+
+    struct chrome_state state;
 
 #if 0
     struct list_head  *crtcs;
