@@ -41,6 +41,8 @@ chrome_textmode_store(struct chrome_info *info)
 	struct chrome_state *state = &info->state;
 	int i;
 
+	DBG(__func__);
+
 	memset(state, 0, sizeof(struct chrome_state));
 
 	/* Don't bother with a synchronous reset, we're not touching anything */
@@ -99,7 +101,9 @@ chrome_textmode_restore(struct chrome_info *info)
 	struct chrome_state *state = &info->state;
 	int i;
 
-	/* Synchronous reset */
+	DBG(__func__);
+
+        /* Synchronous reset */
 	chrome_vga_seq_mask(info, 0x00, 0x00, 0x02);
 
 	/* CR registers */
@@ -156,6 +160,8 @@ chrome_open(struct fb_info *fb_info, int user)
 	struct chrome_info *info = (struct chrome_info *) fb_info;
 	int count;
 
+	DBG(__func__);
+
 	count = atomic_read(&info->fb_ref_count);
     
 	if (!count)
@@ -175,6 +181,8 @@ chrome_release(struct fb_info *fb_info, int user)
 	struct chrome_info *info = (struct chrome_info *) fb_info;
 	int count;
 
+	DBG(__func__);
+
 	count = atomic_read(&info->fb_ref_count);
 
 	if (!count)
@@ -192,14 +200,118 @@ chrome_release(struct fb_info *fb_info, int user)
  *
  */
 static int
-chrome_check_var(struct fb_var_screeninfo *var, struct fb_info *fb_info)
+chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 {
 	struct chrome_info *info = (struct chrome_info *) fb_info;
+	__u32 temp, bytes_per_pixel;
+	int ret;
 
-        /* call chrome_mode_valid(info, mode); */
+	/* bpp */
+	switch (mode->bits_per_pixel) {
+	case 8:
+	case 16:
+		bytes_per_pixel = mode->bits_per_pixel / 8;
+		break;
+	case 24:
+	case 32:
+		bytes_per_pixel = 4;
+		break;
+	default:
+		printk(KERN_WARNING "Unsupported bitdepth: %dbpp.\n", 
+		       mode->bits_per_pixel);
+		return -EINVAL;	
+	}
 
-        return 0;
+	/* Virtual */
+	temp = mode->xres_virtual * mode->yres_virtual * bytes_per_pixel;
+	if (temp >= info->fbsize) {
+		printk(KERN_WARNING "Not enough FB space to house %dx%d@%2dbpp",
+		       mode->xres_virtual, mode->yres_virtual,
+		       mode->bits_per_pixel);
+		return -EINVAL;
+	}
+
+	/* Mode */
+        ret = chrome_mode_valid(info, mode);
+	if (ret)
+		return ret;
+
+	/* Set up memory layout */
+	switch (mode->bits_per_pixel) {
+	case 8:
+		/* Indexed, so null everything except length.
+		 * Length defines the size of data in the palette. */
+		mode->red.offset = 0;
+		mode->red.length = 8;
+		mode->red.msb_right = 0;
+
+		mode->green.offset = 0;
+		mode->green.length = 8;
+		mode->green.msb_right = 0;
+
+		mode->blue.offset = 0;
+		mode->blue.length = 8;
+		mode->blue.msb_right = 0;
+
+		mode->transp.offset = 0;
+		mode->transp.length = 0;
+		mode->transp.msb_right = 0;
+
+		break;
+	case 16:
+		mode->red.offset = 11;
+		mode->red.length = 5;
+		mode->red.msb_right = 0;
+
+		mode->green.offset = 5;
+		mode->green.length = 6;
+		mode->green.msb_right = 0;
+
+		mode->blue.offset = 0;
+		mode->blue.length = 5;
+		mode->blue.msb_right = 0;
+
+		mode->transp.offset = 0;
+		mode->transp.length = 0;
+		mode->transp.msb_right = 0;
+
+		break;
+	case 24:
+	case 32:
+		mode->red.offset = 16;
+		mode->red.length = 8;
+		mode->red.msb_right = 0;
+
+		mode->green.offset = 8;
+		mode->green.length = 8;
+		mode->green.msb_right = 0;
+
+		mode->blue.offset = 0;
+		mode->blue.length = 8;
+		mode->blue.msb_right = 0;
+
+		mode->transp.offset = 0;
+		mode->transp.length = 0;
+		mode->transp.msb_right = 0;
+		
+		break;
+	default:
+		/* checked earlier - so shouldn't happen */
+		return -EINVAL;
+	}
+
+	/* Rotation - not yet. */
+	if (mode->rotate) {
+		printk(KERN_WARNING "We don't do rotation yet.\n");
+		return -EINVAL;
+	}
+
+	return 0;
 }
+
+/*
+ *
+ */
 
 #ifdef UNUSED
 /*
@@ -221,8 +333,8 @@ static struct fb_ops chrome_ops __devinitdata = {
 	.fb_open =  chrome_open,
 	.fb_release =  chrome_release,
 	.fb_check_var =  chrome_check_var,
+	/* .fb_set_par =  chrome_set_par, */
 #if 0
-	.fb_set_par =  chrome_set_par,
 	.fb_setcolreg =  chrome_setcolreg,
 	.fb_blank =  chrome_blank,
 	.fb_pan_display =  chrome_pan_display, 
@@ -250,7 +362,7 @@ MODULE_DESCRIPTION("FBDev driver for VIA Unichrome and Chrome IGPs");
 #endif /* MODULE */
 
 static struct pci_device_id chrome_devices[] = {
-	{PCI_VENDOR_ID_VIA, 0x3122, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
+	{PCI_VENDOR_ID_VIA, PCI_CHIP_VT3122, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
 	{PCI_VENDOR_ID_VIA, PCI_CHIP_VT7205, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
 	{PCI_VENDOR_ID_VIA, PCI_CHIP_VT3108, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
 #ifdef CHROME_ENOHW
