@@ -310,6 +310,38 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 }
 
 /*
+ * Doesn't deal with CRTC1/2 palette switching currently.
+ */
+static int 
+chrome_setcmap(struct fb_cmap *cmap, struct fb_info *fb_info)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+	int i;
+
+	if (cmap->start + cmap->len > 0xFF)
+		return -EINVAL;
+
+	chrome_vga_dac_mask_write(info, 0xFF);
+
+	chrome_vga_dac_write_address(info, cmap->start);
+	for (i = cmap->start; i < (cmap->start + cmap->len); i++) {
+		chrome_vga_dac_write(info, cmap->red[i] & 0xFF);
+		chrome_vga_dac_write(info, cmap->green[i] & 0xFF);
+		chrome_vga_dac_write(info, cmap->blue[i] & 0xFF);
+	}
+
+	/* So, erm... What about the overscan colour then?
+	 * Are you telling me FB has no notion of that either?
+	 */
+	/* just pick 0x00, which is hopefully black*/
+	chrome_vga_attr_write(info, 0x11, 0x00);
+
+	/* We still need to set the Gamma enable bits somewhere */
+	return 0;
+}
+
+
+/*
  *
  */
 
@@ -334,8 +366,9 @@ static struct fb_ops chrome_ops __devinitdata = {
 	.fb_release =  chrome_release,
 	.fb_check_var =  chrome_check_var,
 	/* .fb_set_par =  chrome_set_par, */
+	.fb_setcolreg =  NULL, /* use set_cmap instead */
+	.fb_setcmap = chrome_setcmap,
 #if 0
-	.fb_setcolreg =  chrome_setcolreg,
 	.fb_blank =  chrome_blank,
 	.fb_pan_display =  chrome_pan_display, 
 	.fb_fillrect =  chrome_fillrect,

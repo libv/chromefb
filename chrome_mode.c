@@ -191,9 +191,9 @@ chrome_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode)
 	chrome_vga_align(mode);
 
 	/* Clock */
-	clock = 1000000000 / mode->pixclock; /* idiots. */
-	if ((clock < 20000000) || (clock > 200000000)) {
-		printk(KERN_WARNING "Dotclock %dHz is out of range.\n", clock);
+	clock = PICOS2KHZ(mode->pixclock); /* idiots. */
+	if ((clock < 20000) || (clock > 200000)) {
+		printk(KERN_WARNING "Dotclock %dkHz is out of range.\n", clock);
 		return -EINVAL;
 	}
 
