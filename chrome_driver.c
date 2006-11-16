@@ -373,6 +373,35 @@ chrome_blank(int blank, struct fb_info *fb_info)
 	return 0;
 }
 
+/*
+ * Primary only currently.
+ */
+static int
+chrome_pan_display(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+	__u32 base;
+	
+	DBG(__func__);
+
+	base = (mode->xoffset * mode->xres_virtual) + mode->yoffset;
+	if (mode->bits_per_pixel < 24)
+		base *= mode->bits_per_pixel / 8;
+	else
+		base *= 4;
+	base >>= 1;
+
+	chrome_vga_cr_write(info, 0x0C, (base >> 8) & 0xFF);
+	chrome_vga_cr_write(info, 0x0D, base & 0xFF);
+	chrome_vga_cr_write(info, 0x34, (base >> 16) & 0xFF);
+	
+	/* doesn't hurt even on VT3122 */
+	chrome_vga_cr_mask(info, 0x48, base >> 24, 0x03);
+
+	return 0;
+}
+
+
 #ifdef UNUSED
 /*
  * Sync 2D engine.
@@ -397,8 +426,8 @@ static struct fb_ops chrome_ops __devinitdata = {
 	.fb_setcolreg =  NULL, /* use set_cmap instead */
 	.fb_setcmap = chrome_setcmap,
 	.fb_blank =  chrome_blank,
+	.fb_pan_display =  chrome_pan_display,
 #if 0
-	.fb_pan_display =  chrome_pan_display, 
 	.fb_fillrect =  chrome_fillrect,
 	.fb_copyarea =  chrome_copyarea,
 	.fb_imageblit =  chrome_imageblit,

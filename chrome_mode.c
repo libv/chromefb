@@ -42,8 +42,6 @@ chrome_vga_align(struct fb_var_screeninfo *mode)
 {
 #define VGA_H_ALIGN(x) (x) = ((x) + 7) & ~7
 
-	VGA_H_ALIGN(mode->width);
-
 	VGA_H_ALIGN(mode->xres);
 	VGA_H_ALIGN(mode->right_margin);
 	VGA_H_ALIGN(mode->hsync_len);
