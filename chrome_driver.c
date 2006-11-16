@@ -206,6 +206,8 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 	__u32 temp, bytes_per_pixel;
 	int ret;
 
+	DBG(__func__);
+
 	/* bpp */
 	switch (mode->bits_per_pixel) {
 	case 8:
@@ -318,6 +320,8 @@ chrome_setcmap(struct fb_cmap *cmap, struct fb_info *fb_info)
 	struct chrome_info *info = (struct chrome_info *) fb_info;
 	int i;
 
+	DBG(__func__);
+
 	if (cmap->start + cmap->len > 0xFF)
 		return -EINVAL;
 
@@ -340,10 +344,34 @@ chrome_setcmap(struct fb_cmap *cmap, struct fb_info *fb_info)
 	return 0;
 }
 
-
 /*
- *
+ * Very rudimentary, could be mightily advanced though.
  */
+static int 
+chrome_blank(int blank, struct fb_info *fb_info)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+
+	DBG(__func__);
+
+	switch (blank) {
+	case FB_BLANK_UNBLANK:
+		chrome_vga_cr_mask(info, 0x17, 0x80, 0x80);
+		/* outputs? */
+		break;
+	case FB_BLANK_NORMAL:
+	case FB_BLANK_VSYNC_SUSPEND:
+	case FB_BLANK_HSYNC_SUSPEND:
+	case FB_BLANK_POWERDOWN:
+		chrome_vga_cr_mask(info, 0x17, 0x00, 0x80);
+		/* outputs? */
+		/* We could do so much more here */
+		break;
+	default:
+		return -EINVAL; 
+	}
+	return 0;
+}
 
 #ifdef UNUSED
 /*
@@ -368,8 +396,8 @@ static struct fb_ops chrome_ops __devinitdata = {
 	/* .fb_set_par =  chrome_set_par, */
 	.fb_setcolreg =  NULL, /* use set_cmap instead */
 	.fb_setcmap = chrome_setcmap,
-#if 0
 	.fb_blank =  chrome_blank,
+#if 0
 	.fb_pan_display =  chrome_pan_display, 
 	.fb_fillrect =  chrome_fillrect,
 	.fb_copyarea =  chrome_copyarea,
