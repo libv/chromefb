@@ -103,5 +103,6 @@ void via_ramctrl_info(struct chrome_info *info);
 
 /* from chrome_mode.c */
 int chrome_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode);
+int chrome_mode_write(struct chrome_info *info, struct fb_var_screeninfo *mode);
 
 #endif /* HAVE_CHROMEFB_H */

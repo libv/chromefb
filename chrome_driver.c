@@ -312,6 +312,25 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 }
 
 /*
+ *
+ */
+static int
+chrome_set_par(struct fb_info *fb_info)
+{
+	struct chrome_info *info = (struct chrome_info *) fb_info;
+	struct fb_var_screeninfo *mode = &fb_info->var;
+	int ret;
+
+	DBG(__func__);
+
+	ret = chrome_mode_write(info, mode);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+/*
  * Doesn't deal with CRTC1/2 palette switching currently.
  */
 static int 
@@ -402,7 +421,6 @@ chrome_pan_display(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 }
 
 
-#ifdef UNUSED
 /*
  * Sync 2D engine.
  */
@@ -412,28 +430,26 @@ chrome_sync(struct fb_info *fb_info)
 	/* not using 2D engine yet. */
 	return 0;
 }
-#endif
 
 /*
  * FB driver callbacks.
  */
+/* This is nasty - should be allocated */
 static struct fb_ops chrome_ops __devinitdata = {
 	.owner =  THIS_MODULE,
 	.fb_open =  chrome_open,
 	.fb_release =  chrome_release,
 	.fb_check_var =  chrome_check_var,
-	/* .fb_set_par =  chrome_set_par, */
+	.fb_set_par =  chrome_set_par,
 	.fb_setcolreg =  NULL, /* use set_cmap instead */
 	.fb_setcmap = chrome_setcmap,
 	.fb_blank =  chrome_blank,
 	.fb_pan_display =  chrome_pan_display,
-#if 0
-	.fb_fillrect =  chrome_fillrect,
-	.fb_copyarea =  chrome_copyarea,
-	.fb_imageblit =  chrome_imageblit,
-	.fb_cursor =  chrome_cursor,
+	.fb_fillrect =  cfb_fillrect,
+	.fb_copyarea =  cfb_copyarea,
+	.fb_imageblit =  cfb_imageblit,
+	.fb_cursor =  soft_cursor,
 	.fb_sync =  chrome_sync,
-#endif
 };
 
 
@@ -525,7 +541,7 @@ chrome_io_init(struct chrome_info *info)
 	chrome_vga_seq_write(info, 0x10, 0x01);
 
 	/* enable MMIO for primary */
-	chrome_vga_seq_mask(info, 0x10, 0x60, 0x60);
+	chrome_vga_seq_mask(info, 0x1A, 0x60, 0x60);
 
 	return 0;
 }
@@ -643,6 +659,16 @@ chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	err = chrome_fb_init(info);
 	if (err)
 		goto cleanup_io;
+
+	/* Attach FB callbacks */
+	info->fb_info.fbops = &chrome_ops;
+
+	err = register_framebuffer(&info->fb_info);
+	if (err) {
+		printk(KERN_ERR "%s: register_framebuffer failed: %d\n",
+		       __func__, err);
+		goto cleanup_fb;
+	}
 
 	/* Attach */
 	pci_set_drvdata(dev, &info->fb_info);
