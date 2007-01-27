@@ -1,7 +1,7 @@
 /*
  * chromefb: driver for VIAs UniChrome and Chrome IGP graphics.
  *
- * Copyright (c) 2006      by Luc Verhaegen (libv@skynet.be)
+ * Copyright (c) 2003-2007  by Luc Verhaegen (libv@skynet.be)
  *
  * This file is subject to the terms and conditions of the GNU General
  * Public License.  See the file COPYING in the main directory of this
@@ -171,6 +171,20 @@ chrome_crtc1_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode
 	default:
 		printk(KERN_WARNING "%s: unsupported chip: 0x%4X\n", 
 		       __func__, info->id);
+		return -EINVAL;
+	}
+
+	/* Offset */
+	temp = mode->xres_virtual * bytes_per_pixel;
+	if (temp > 16368) {
+		printk(KERN_WARNING "Offset too wide.\n");
+		return -EINVAL;
+	}
+
+	/* Fetch count -- caught by xres check higher up */
+	temp = mode->xres * bytes_per_pixel;
+	if (temp > 16376) {
+		printk(KERN_WARNING "Fetch count too wide.\n");
 		return -EINVAL;
 	}
 
@@ -378,7 +392,7 @@ chrome_mode_crtc_primary(struct chrome_info *info, struct fb_var_screeninfo *mod
 	else
 		bytes_per_pixel = 4;
 
-	/* offset */
+	/* offset: 0x7FF * 8: 16376Bytes: 4094pixels for 24/32bpp */
 	temp = mode->xres_virtual * bytes_per_pixel / 8;
 	/* Make sure that this is 32byte aligned */
 	if (temp & 0x03) {
@@ -388,7 +402,7 @@ chrome_mode_crtc_primary(struct chrome_info *info, struct fb_var_screeninfo *mod
 	chrome_vga_cr_write(info, 0x13, temp & 0xFF);
 	chrome_vga_cr_mask(info, 0x35, temp >> 3, 0xE0);
 
-	/* fetch count */
+	/* fetch count: 16368Bytes: 4092pixels for 24/32bpp */
 	temp = mode->xres * bytes_per_pixel / 8;
 	/* Make sure that this is 32byte aligned */
 	if (temp & 0x03) {

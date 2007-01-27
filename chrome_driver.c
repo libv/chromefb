@@ -1,7 +1,7 @@
 /*
  * chromefb: driver for VIAs UniChrome and Chrome IGP graphics.
  *
- * Copyright (c) 2006      by Luc Verhaegen (libv@skynet.be)
+ * Copyright (c) 2003-2007 by Luc Verhaegen (libv@skynet.be)
  *
  * This file is subject to the terms and conditions of the GNU General
  * Public License.  See the file COPYING in the main directory of this
@@ -448,7 +448,7 @@ static struct fb_ops chrome_ops __devinitdata = {
 	.fb_fillrect =  cfb_fillrect,
 	.fb_copyarea =  cfb_copyarea,
 	.fb_imageblit =  cfb_imageblit,
-	.fb_cursor =  soft_cursor,
+	/* .fb_cursor =  soft_cursor, */
 	.fb_sync =  chrome_sync,
 };
 
@@ -461,7 +461,7 @@ static struct fb_ops chrome_ops __devinitdata = {
 
 #ifdef MODULE
 
-MODULE_AUTHOR("(c) 2003-2006 by Luc Verhaegen (libv@skynet.be)");
+MODULE_AUTHOR("(c) 2003-2007 by Luc Verhaegen (libv@skynet.be)");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("FBDev driver for VIA Unichrome and Chrome IGPs");
 
@@ -512,6 +512,7 @@ chrome_alloc_fb_info(struct pci_dev *dev, const struct pci_device_id *id)
 static int
 chrome_io_init(struct chrome_info *info)
 {
+	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
 	unsigned int iobase, ioend;
 
 	DBG(__func__);
@@ -543,6 +544,10 @@ chrome_io_init(struct chrome_info *info)
 	/* enable MMIO for primary */
 	chrome_vga_seq_mask(info, 0x1A, 0x60, 0x60);
 
+	/* Set up the fix structure -- why is this so mangled? */
+	fix->mmio_start = iobase;
+	fix->mmio_len = ioend - iobase;
+
 	return 0;
 }
 
@@ -553,6 +558,7 @@ chrome_io_init(struct chrome_info *info)
 static void
 chrome_io_release(struct chrome_info *info)
 {
+	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
 	unsigned int iobase, ioend;
 
 	DBG(__func__);
@@ -560,10 +566,13 @@ chrome_io_release(struct chrome_info *info)
 	iobase = info->pci_dev->resource[1].start;
 	ioend = info->pci_dev->resource[1].end;
 
+	iounmap(info->iobase);
 	release_mem_region(iobase, ioend - iobase);
 
 	/* induce segfault upon next access */
 	info->iobase = NULL;
+	fix->mmio_start = 0;
+	fix->mmio_len = 0;
 }
 
 /*
@@ -573,6 +582,7 @@ chrome_io_release(struct chrome_info *info)
 static int
 chrome_fb_init(struct chrome_info *info)
 {
+	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
 	unsigned int fbbase, fbend;
 
 	DBG(__func__);
@@ -591,6 +601,10 @@ chrome_fb_init(struct chrome_info *info)
 		release_mem_region(fbbase, fbend - fbbase);
 		return -ENODEV;
 	}
+
+	/* Set up the fix structure -- why is this so mangled? */
+	fix->smem_start = fbbase;
+	fix->smem_len = fbend - fbbase;
 
 	/* enable writing to all VGA planes */
 	chrome_vga_seq_write(info, 0x02, 0x0F);
@@ -611,6 +625,7 @@ chrome_fb_init(struct chrome_info *info)
 static void
 chrome_fb_release(struct chrome_info *info)
 {
+	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
 	unsigned int fbbase, fbend;
 
 	DBG(__func__);
@@ -618,10 +633,13 @@ chrome_fb_release(struct chrome_info *info)
 	fbbase = info->pci_dev->resource[0].start;
 	fbend = info->pci_dev->resource[0].end;
 
+	iounmap(info->fbbase);
 	release_mem_region(fbbase, fbend - fbbase);
 
 	/* induce segfault upon next access */
 	info->fbbase = NULL;
+	fix->smem_start = 0;
+	fix->smem_len = 0;
 }
 
 /*
@@ -660,8 +678,20 @@ chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	if (err)
 		goto cleanup_io;
 
+	{ /* fractured api */
+		struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
+
+		fix->xpanstep = 2;
+		fix->ypanstep = 1;
+		fix->ywrapstep = 0;
+
+		fix->accel = 0; /* NONE */
+	}
+
 	/* Attach FB callbacks */
 	info->fb_info.fbops = &chrome_ops;
+
+        info->fb_info.device = &dev->dev;
 
 	err = register_framebuffer(&info->fb_info);
 	if (err) {
@@ -671,7 +701,7 @@ chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	}
 
 	/* Attach */
-	pci_set_drvdata(dev, &info->fb_info);
+        pci_set_drvdata(dev, &info->fb_info);
 	return 0;
 
 cleanup_fb:

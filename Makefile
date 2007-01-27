@@ -1,7 +1,7 @@
 SHELL=/bin/sh
 
 ifndef LINUXDIR
-	LINUXDIR := /root/kernel/linux-2.6.14/
+	LINUXDIR := /usr/src/linux-source-2.6.18/
 endif
 
 CFLAGS += -Wall -g
