@@ -6,7 +6,7 @@ endif
 
 CFLAGS += -Wall -g
 
-chromefb-objs := chrome_driver.o via_ramctrl.o chrome_io.o chrome_mode.o
+chromefb-objs := chrome_driver.o chrome_host.o chrome_io.o chrome_mode.o
 obj-m += chromefb.o
 
 all: modules

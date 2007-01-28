@@ -461,7 +461,7 @@ static struct fb_ops chrome_ops __devinitdata = {
 
 #ifdef MODULE
 
-MODULE_AUTHOR("(c) 2003-2007 by Luc Verhaegen (libv@skynet.be)");
+MODULE_AUTHOR("(c) 2003-2007 Luc Verhaegen (libv@skynet.be)");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("FBDev driver for VIA Unichrome and Chrome IGPs");
 
@@ -583,32 +583,29 @@ static int
 chrome_fb_init(struct chrome_info *info)
 {
 	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
-	unsigned int fbbase, fbend;
+	unsigned int size = info->fbsize * 1024;
 
 	DBG(__func__);
 
-	fbbase = info->pci_dev->resource[0].start;
-	fbend = info->pci_dev->resource[0].end;
-	
-	if (!request_mem_region(fbbase, fbend - fbbase, DRIVER_NAME)) {
+	if (!request_mem_region(info->fb_physical, size, DRIVER_NAME)) {
 		printk(KERN_ERR "%s: Cannot request FB resource.\n", __func__);
 		return -ENODEV;
 	}
 
-	info->fbbase = ioremap_nocache(fbbase, 0x9000);
+	info->fbbase = ioremap_nocache(info->fb_physical, size);
 	if (!info->fbbase) {
 		printk(KERN_ERR "%s: Unable to remap FB region.\n", __func__);
-		release_mem_region(fbbase, fbend - fbbase);
+		release_mem_region(info->fb_physical, size);
 		return -ENODEV;
 	}
 
 	/* Set up the fix structure -- why is this so mangled? */
-	fix->smem_start = fbbase;
-	fix->smem_len = fbend - fbbase;
+	fix->smem_start = info->fb_physical;
+	fix->smem_len = size;
 
 	/* enable writing to all VGA planes */
 	chrome_vga_seq_write(info, 0x02, 0x0F);
-	
+
 	/* enable extended VGA memory */
 	chrome_vga_seq_write(info, 0x04, 0x0E);
 
@@ -626,15 +623,11 @@ static void
 chrome_fb_release(struct chrome_info *info)
 {
 	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
-	unsigned int fbbase, fbend;
 
 	DBG(__func__);
 
-	fbbase = info->pci_dev->resource[0].start;
-	fbend = info->pci_dev->resource[0].end;
-
 	iounmap(info->fbbase);
-	release_mem_region(fbbase, fbend - fbbase);
+	release_mem_region(info->fb_physical, info->fbsize *1024);
 
 	/* induce segfault upon next access */
 	info->fbbase = NULL;
@@ -661,12 +654,9 @@ chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	if (!info)
 		return -ENOMEM;
 
-	/* Get, amongst others, FB Size straight from the RAM controller */
-	via_ramctrl_info(info);
-	if (!info->fbsize) {
-		printk(KERN_ERR "%s: 0kB FB ram found. Exiting\n", __func__);
-		goto cleanup_info;
-	}
+	/* Do this before anything else. */
+	if (chrome_host(info))
+                goto cleanup_info;
 
 	/* Enable IO */
 	err = chrome_io_init(info);
@@ -753,6 +743,10 @@ static int __init
 chrome_init(void)
 {
 	DBG(__func__);
+
+        printk(KERN_INFO
+               "chromefb: FBDev driver for VIA Unichrome and Chrome IGPs\n");
+        printk(KERN_INFO "(c) 2003-2007 Luc Verhaegen (libv@skynet.be)\n");
 
 	return pci_register_driver(&chrome_driver);
 }

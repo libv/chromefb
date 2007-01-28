@@ -39,6 +39,18 @@
 #define PCI_CHIP_VT3343 0x3343 /* Unichrome Pro: P4M890 */
 #define PCI_CHIP_VT3371 0x3371 /* Chrome 9: P4M900 */
 
+/* Host bridges for VIA Chrome devices. */
+#define HOST_BRIDGE_CLE266 0x3123
+#define HOST_BRIDGE_KM400  0x3205
+#define HOST_BRIDGE_P4M800 0x0296
+#define HOST_BRIDGE_K8M800 0x0204
+
+/* Track the type of RAM being used */
+#define RAM_TYPE_DDR200 0
+#define RAM_TYPE_DDR266 1
+#define RAM_TYPE_DDR333 2
+#define RAM_TYPE_DDR400 3
+
 /*
  * Stores the full textmode state.
  */
@@ -72,6 +84,11 @@ struct chrome_info {
 
     unsigned int  id;
 
+    unsigned int  host;
+    unsigned char host_rev;
+    unsigned int  ram_type;
+
+    unsigned int  fb_physical;
     void __iomem  *fbbase;
     unsigned int  fbsize;
 
@@ -98,8 +115,8 @@ struct chrome_output {
 };
 #endif
 
-/* from via_ramctrl.c */
-void via_ramctrl_info(struct chrome_info *info);
+/* from chrome_host.c */
+int chrome_host(struct chrome_info *info);
 
 /* from chrome_mode.c */
 int chrome_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode);
