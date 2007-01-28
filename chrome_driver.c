@@ -163,7 +163,7 @@ chrome_open(struct fb_info *fb_info, int user)
 	DBG(__func__);
 
 	count = atomic_read(&info->fb_ref_count);
-    
+
 	if (!count)
 		chrome_textmode_store(info);
 
@@ -219,9 +219,9 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 		bytes_per_pixel = 4;
 		break;
 	default:
-		printk(KERN_WARNING "Unsupported bitdepth: %dbpp.\n", 
+		printk(KERN_WARNING "Unsupported bitdepth: %dbpp.\n",
 		       mode->bits_per_pixel);
-		return -EINVAL;	
+		return -EINVAL;
 	}
 
 	/* Virtual */
@@ -295,7 +295,7 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 		mode->transp.offset = 0;
 		mode->transp.length = 0;
 		mode->transp.msb_right = 0;
-		
+
 		break;
 	default:
 		/* checked earlier - so shouldn't happen */
@@ -333,7 +333,7 @@ chrome_set_par(struct fb_info *fb_info)
 /*
  * Doesn't deal with CRTC1/2 palette switching currently.
  */
-static int 
+static int
 chrome_setcmap(struct fb_cmap *cmap, struct fb_info *fb_info)
 {
 	struct chrome_info *info = (struct chrome_info *) fb_info;
@@ -366,7 +366,7 @@ chrome_setcmap(struct fb_cmap *cmap, struct fb_info *fb_info)
 /*
  * Very rudimentary, could be mightily advanced though.
  */
-static int 
+static int
 chrome_blank(int blank, struct fb_info *fb_info)
 {
 	struct chrome_info *info = (struct chrome_info *) fb_info;
@@ -387,7 +387,7 @@ chrome_blank(int blank, struct fb_info *fb_info)
 		/* We could do so much more here */
 		break;
 	default:
-		return -EINVAL; 
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -400,7 +400,7 @@ chrome_pan_display(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 {
 	struct chrome_info *info = (struct chrome_info *) fb_info;
 	__u32 base;
-	
+
 	DBG(__func__);
 
 	base = (mode->xoffset * mode->xres_virtual) + mode->yoffset;
@@ -413,7 +413,7 @@ chrome_pan_display(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 	chrome_vga_cr_write(info, 0x0C, (base >> 8) & 0xFF);
 	chrome_vga_cr_write(info, 0x0D, base & 0xFF);
 	chrome_vga_cr_write(info, 0x34, (base >> 16) & 0xFF);
-	
+
 	/* doesn't hurt even on VT3122 */
 	chrome_vga_cr_mask(info, 0x48, base >> 24, 0x03);
 
@@ -519,7 +519,7 @@ chrome_io_init(struct chrome_info *info)
 
 	iobase = info->pci_dev->resource[1].start;
 	ioend = info->pci_dev->resource[1].end;
-	
+
 	if (!request_mem_region(iobase, ioend - iobase, DRIVER_NAME)) {
 		printk(KERN_ERR "%s: Cannot request IO resource.\n", __func__);
 		return -ENODEV;
@@ -638,7 +638,7 @@ chrome_fb_release(struct chrome_info *info)
 /*
  * Main initialisation routine.
  */
-static int __devinit 
+static int __devinit
 chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	struct chrome_info *info;
@@ -707,7 +707,7 @@ cleanup_err:
 /*
  *
  */
-static void __devexit 
+static void __devexit
 chrome_remove(struct pci_dev *dev)
 {
     struct chrome_info *info = (struct chrome_info *) pci_get_drvdata(dev);
@@ -720,7 +720,7 @@ chrome_remove(struct pci_dev *dev)
 
 		if (info->iobase)
 			chrome_io_release(info);
-		
+
 		pci_set_drvdata(dev, NULL);
 		kfree(info);
 	}
@@ -739,7 +739,7 @@ static struct pci_driver chrome_driver = {
 /*
  *
  */
-static int __init 
+static int __init
 chrome_init(void)
 {
 	DBG(__func__);
@@ -757,7 +757,7 @@ module_init(chrome_init);
  *
  */
 #ifdef MODULE
-static void __exit 
+static void __exit
 chrome_exit(void)
 {
 	pci_unregister_driver(&chrome_driver);

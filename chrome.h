@@ -55,52 +55,52 @@
  * Stores the full textmode state.
  */
 struct chrome_state {
-    /* VGA registers + extensions */
-    unsigned char CR[0xA2];
-    unsigned char SR[0x1D];
-    unsigned char GR[0x08];
-    unsigned char AR[0x14];
-    unsigned char Misc;
+        /* VGA registers + extensions */
+        unsigned char CR[0xA2];
+        unsigned char SR[0x1D];
+        unsigned char GR[0x08];
+        unsigned char AR[0x14];
+        unsigned char Misc;
 
-    /* all four 4 VGA FB planes (0xA0000) */
+        /* all four 4 VGA FB planes (0xA0000) */
 #define VGA_FB_PLANE_SIZE 64*1024
-    unsigned char *planes;
+        unsigned char *planes;
 
-    /* DAC */
-    struct {
-        unsigned char red;
-        unsigned char green;
-        unsigned char blue;
-    } palette[0x100];
+        /* DAC */
+        struct {
+                unsigned char red;
+                unsigned char green;
+                unsigned char blue;
+        } palette[0x100];
 };
 
 /*
  * Holds all our information.
  */
 struct chrome_info {
-    struct fb_info  fb_info;
+        struct fb_info  fb_info;
 
-    struct pci_dev  *pci_dev;
+        struct pci_dev  *pci_dev;
 
-    unsigned int  id;
+        unsigned int  id;
 
-    unsigned int  host;
-    unsigned char host_rev;
-    unsigned int  ram_type;
+        unsigned int  host;
+        unsigned char host_rev;
+        unsigned int  ram_type;
 
-    unsigned int  fb_physical;
-    void __iomem  *fbbase;
-    unsigned int  fbsize;
+        unsigned int  fb_physical;
+        void __iomem  *fbbase;
+        unsigned int  fbsize;
 
-    void __iomem  *iobase;
+        void __iomem  *iobase;
 
-    atomic_t  fb_ref_count;
+        atomic_t  fb_ref_count;
 
-    struct chrome_state state;
+        struct chrome_state state;
 
 #if 0
-    struct list_head  *crtcs;
-    struct list_head  *outputs;
+        struct list_head  *crtcs;
+        struct list_head  *outputs;
 #endif
 
 };
@@ -110,7 +110,7 @@ struct chrome_info {
  * Holds all outputs.
  */
 struct chrome_output {
-    struct list_head  node;
+        struct list_head  node;
 
 };
 #endif

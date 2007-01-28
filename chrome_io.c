@@ -45,19 +45,19 @@
 /*
  * Misc register.
  */
-unsigned char 
+unsigned char
 chrome_vga_misc_read(struct chrome_info *info)
 {
 	return CHROME_VGA(info, CHROME_VGA_MISC_READ);
 }
 
-void 
+void
 chrome_vga_misc_write(struct chrome_info *info, unsigned char value)
 {
 	CHROME_VGA(info, CHROME_VGA_MISC_WRITE) = value;
 }
 
-void 
+void
 chrome_vga_misc_mask(struct chrome_info *info, unsigned char value,
                      unsigned char mask)
 {
@@ -72,7 +72,7 @@ chrome_vga_misc_mask(struct chrome_info *info, unsigned char value,
 /*
  * CR registers.
  */
-unsigned char 
+unsigned char
 chrome_vga_cr_read(struct chrome_info *info, unsigned char index)
 {
 	CHROME_VGA(info, CHROME_VGA_CR_INDEX) = index;
@@ -80,7 +80,7 @@ chrome_vga_cr_read(struct chrome_info *info, unsigned char index)
 	return CHROME_VGA(info, CHROME_VGA_CR_VALUE);
 }
 
-void 
+void
 chrome_vga_cr_write(struct chrome_info *info, unsigned char index,
                     unsigned char value)
 {
@@ -88,7 +88,7 @@ chrome_vga_cr_write(struct chrome_info *info, unsigned char index,
 	CHROME_VGA(info, CHROME_VGA_CR_VALUE) = value;
 }
 
-void 
+void
 chrome_vga_cr_mask(struct chrome_info *info, unsigned char index,
                    unsigned char value, unsigned char mask)
 {
@@ -106,7 +106,7 @@ chrome_vga_cr_mask(struct chrome_info *info, unsigned char index,
 /*
  * Sequence registers.
  */
-unsigned char 
+unsigned char
 chrome_vga_seq_read(struct chrome_info *info, unsigned char index)
 {
 	CHROME_VGA(info, CHROME_VGA_SEQ_INDEX) = index;
@@ -114,7 +114,7 @@ chrome_vga_seq_read(struct chrome_info *info, unsigned char index)
 	return CHROME_VGA(info, CHROME_VGA_SEQ_VALUE);
 }
 
-void 
+void
 chrome_vga_seq_write(struct chrome_info *info, unsigned char index,
                      unsigned char value)
 {
@@ -122,7 +122,7 @@ chrome_vga_seq_write(struct chrome_info *info, unsigned char index,
 	CHROME_VGA(info, CHROME_VGA_SEQ_VALUE) = value;
 }
 
-void 
+void
 chrome_vga_seq_mask(struct chrome_info *info, unsigned char index,
                     unsigned char value, unsigned char mask)
 {
@@ -140,19 +140,19 @@ chrome_vga_seq_mask(struct chrome_info *info, unsigned char index,
 /*
  * VGA Enable register.
  */
-unsigned char 
+unsigned char
 chrome_vga_enable_read(struct chrome_info *info)
 {
 	return CHROME_VGA(info, CHROME_VGA_ENABLE);
 }
 
-void 
+void
 chrome_vga_enable_write(struct chrome_info *info, unsigned char value)
 {
 	CHROME_VGA(info, CHROME_VGA_ENABLE) = value;
 }
 
-void 
+void
 chrome_vga_enable_mask(struct chrome_info *info, unsigned char value,
                        unsigned char mask)
 {
@@ -167,7 +167,7 @@ chrome_vga_enable_mask(struct chrome_info *info, unsigned char value,
 /*
  * Graphics registers.
  */
-unsigned char 
+unsigned char
 chrome_vga_graph_read(struct chrome_info *info, unsigned char index)
 {
 	CHROME_VGA(info, CHROME_VGA_GRAPH_INDEX) = index;
@@ -175,7 +175,7 @@ chrome_vga_graph_read(struct chrome_info *info, unsigned char index)
 	return CHROME_VGA(info, CHROME_VGA_GRAPH_VALUE);
 }
 
-void 
+void
 chrome_vga_graph_write(struct chrome_info *info, unsigned char index,
                        unsigned char value)
 {
@@ -183,7 +183,7 @@ chrome_vga_graph_write(struct chrome_info *info, unsigned char index,
 	CHROME_VGA(info, CHROME_VGA_GRAPH_VALUE) = value;
 }
 
-void 
+void
 chrome_vga_graph_mask(struct chrome_info *info, unsigned char index,
                       unsigned char value, unsigned char mask)
 {
@@ -200,7 +200,7 @@ chrome_vga_graph_mask(struct chrome_info *info, unsigned char index,
 /*
  * Attribute registers.
  */
-unsigned char 
+unsigned char
 chrome_vga_attr_read(struct chrome_info *info, unsigned char index)
 {
 	CHROME_VGA(info, CHROME_VGA_ATTR_INDEX) = index;
@@ -208,7 +208,7 @@ chrome_vga_attr_read(struct chrome_info *info, unsigned char index)
 	return CHROME_VGA(info, CHROME_VGA_ATTR_VALUE);
 }
 
-void 
+void
 chrome_vga_attr_write(struct chrome_info *info, unsigned char index,
                       unsigned char value)
 {
@@ -216,7 +216,7 @@ chrome_vga_attr_write(struct chrome_info *info, unsigned char index,
 	CHROME_VGA(info, CHROME_VGA_ATTR_VALUE) = value;
 }
 
-void 
+void
 chrome_vga_attr_mask(struct chrome_info *info, unsigned char index,
                      unsigned char value, unsigned char mask)
 {

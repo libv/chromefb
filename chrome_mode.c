@@ -52,7 +52,7 @@ chrome_vga_align(struct fb_var_screeninfo *mode)
 /*
  * TODO: properly track overscan and adjust blanking accordingly.
  */
-static int 
+static int
 chrome_crtc1_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode)
 {
 	__u32 total, blank_start, sync_start, sync_end, blank_end;
@@ -148,7 +148,7 @@ chrome_crtc1_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode
 	if (mode->bits_per_pixel < 24) /* don't do an extensive check here */
 		bytes_per_pixel = mode->bits_per_pixel / 8;
 	else
-		bytes_per_pixel = 4;	
+		bytes_per_pixel = 4;
 
 	/* We can't always pan all the way */
 	/* Calculate the maximum offset */
@@ -169,7 +169,7 @@ chrome_crtc1_mode_valid(struct chrome_info *info, struct fb_var_screeninfo *mode
 		printk(KERN_WARNING "Virtual resolution exceeds panning limit");
 		return -EINVAL;
 	default:
-		printk(KERN_WARNING "%s: unsupported chip: 0x%4X\n", 
+		printk(KERN_WARNING "%s: unsupported chip: 0x%4X\n",
 		       __func__, info->id);
 		return -EINVAL;
 	}
@@ -246,7 +246,7 @@ chrome_mode_crtc_primary(struct chrome_info *info, struct fb_var_screeninfo *mod
 		temp |= 0x80;
 	temp |= 0x0C; /* Undefined/external clock */
 	chrome_vga_misc_write(info, temp);
-    
+
 	/* Sequence registers */
 	chrome_vga_seq_write(info, 0x01, 0xDF);
 
@@ -422,7 +422,7 @@ chrome_mode_crtc_primary(struct chrome_info *info, struct fb_var_screeninfo *mod
  * PLLs.
  *
  */
-/* 
+/*
  *
  */
 static void
@@ -519,7 +519,7 @@ vt3122_pll_generate(int clock)
 		pll = vt3122_pll_generate_best(clock, 1, 16, 24, &diff);
 	else if (clock > 71389) {
 		pll = 0x1050; /* Big singularity. */
-        
+
 		diff = clock - 71590;
 		if (diff < 0)
 			diff *= -1;
@@ -527,7 +527,7 @@ vt3122_pll_generate(int clock)
 		__u32 tmp_pll;
 
 		pll = vt3122_pll_generate_best(clock, 2, 7, 18, &diff);
-    
+
 		if (clock > 69024)
 			tmp_pll = vt3122_pll_generate_best(clock, 1, 15, 23, &diff);
 		else if (clock > 63500)
@@ -549,7 +549,7 @@ vt3122_pll_generate(int clock)
 		pll = vt3122_pll_generate_best(clock, 2, 11, 21, &diff);
 	else
 		pll = vt3122_pll_generate_best(clock, 4, 8, 19, &diff);
-    
+
 	printk(KERN_DEBUG "%s: pll: 0x%04X (%d off from %d)\n",
 	       __func__, pll, diff, clock);
 	return pll;
@@ -564,7 +564,7 @@ vt3108_pll_generate_best(int clock, int shift, int div, int old_diff,
 {
 	int mult;
 	int diff;
-	
+
 	mult = clock * (div << shift) * 1000;
 	mult /= 14318;
 	mult += 500; /* round */
@@ -576,7 +576,7 @@ vt3108_pll_generate_best(int clock, int shift, int div, int old_diff,
 	diff = clock - mult * 14318 / (div << shift);
 	if (diff < 0)
 		diff *= -1;
-    
+
 	if (diff < old_diff) {
 		*pll = (mult - 2) << 16;
 		*pll |= div - 2;
@@ -601,13 +601,13 @@ vt3108_pll_generate(int clock)
 	for (i = 2; i < 15; i++)
 		diff = vt3108_pll_generate_best(clock, 0, i, diff, &pll);
 
-	for (i = 2; i < 15; i++) 
+	for (i = 2; i < 15; i++)
 		diff = vt3108_pll_generate_best(clock, 1, i, diff, &pll);
 
-	for (i = 2; i < 32; i++) 
+	for (i = 2; i < 32; i++)
 		diff = vt3108_pll_generate_best(clock, 2, i, diff, &pll);
 
-	for (i = 2; i < 21; i++) 
+	for (i = 2; i < 21; i++)
 		diff = vt3108_pll_generate_best(clock, 3, i, diff, &pll);
 
 	printk(KERN_DEBUG "%s: PLL: 0x%04X (%d off from %d)\n",
@@ -641,7 +641,7 @@ chrome_pll_generate(struct chrome_info *info, int clock)
 /*
  * Primary only, so far.
  */
-int 
+int
 chrome_mode_write(struct chrome_info *info, struct fb_var_screeninfo *mode)
 {
 	__u32 pll;
