@@ -464,6 +464,8 @@ vt3122_pll_generate_best(int clock, int shift, int min_div, int max_div,
 	__u8 pll_shift;
 	int div, mult, diff;
 
+        DBG(__func__);
+
 	switch (shift) {
 	case 4:
 		pll_shift = 0x80;
@@ -645,6 +647,10 @@ int
 chrome_mode_write(struct chrome_info *info, struct fb_var_screeninfo *mode)
 {
 	__u32 pll;
+
+        DBG(__func__);
+
+        printk("Setting up %dx%d:%dps\n", mode->xres, mode->yres, mode->pixclock);
 
 	chrome_vga_cr_mask(info, 0x17, 0x00, 0x80);
 

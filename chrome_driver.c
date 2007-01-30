@@ -226,8 +226,8 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 
 	/* Virtual */
 	temp = mode->xres_virtual * mode->yres_virtual * bytes_per_pixel;
-	if (temp >= info->fbsize) {
-		printk(KERN_WARNING "Not enough FB space to house %dx%d@%2dbpp",
+	if (temp >= info->fbsize * 1024) {
+		printk(KERN_WARNING "Not enough FB space to house %dx%d@%2dbpp\n",
 		       mode->xres_virtual, mode->yres_virtual,
 		       mode->bits_per_pixel);
 		return -EINVAL;
@@ -326,6 +326,8 @@ chrome_set_par(struct fb_info *fb_info)
 	ret = chrome_mode_write(info, mode);
 	if (ret)
 		return ret;
+
+        fb_info->fix.line_length = mode->xres * (mode->bits_per_pixel >> 3);
 
 	return 0;
 }
@@ -498,6 +500,7 @@ chrome_alloc_fb_info(struct pci_dev *dev, const struct pci_device_id *id)
                                              GFP_KERNEL);
 	if (!info)
 		return NULL;
+        memset(info, 0, sizeof(struct chrome_info));
 
 	info->id = id->device;
 	info->pci_dev = dev;
@@ -602,6 +605,7 @@ chrome_fb_init(struct chrome_info *info)
 	/* Set up the fix structure -- why is this so mangled? */
 	fix->smem_start = info->fb_physical;
 	fix->smem_len = size;
+        info->fb_info.screen_base = info->fbbase;
 
 	/* enable writing to all VGA planes */
 	chrome_vga_seq_write(info, 0x02, 0x0F);
@@ -682,6 +686,14 @@ chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	info->fb_info.fbops = &chrome_ops;
 
         info->fb_info.device = &dev->dev;
+
+        /* Set up a basic mode. */
+        if (!fb_find_mode(&info->fb_info.var, &info->fb_info, "640x400",
+                          NULL, 0, NULL, 32)) {
+                printk(KERN_ERR "Failed to get a valid mode for 640x480.\n");
+                err = -EINVAL;
+                goto cleanup_fb;
+        }
 
 	err = register_framebuffer(&info->fb_info);
 	if (err) {

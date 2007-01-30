@@ -4,7 +4,7 @@ ifndef LINUXDIR
 	LINUXDIR := /usr/src/linux-source-2.6.18/
 endif
 
-CFLAGS += -Wall -g
+CFLAGS += -Wall -g -O0
 
 chromefb-objs := chrome_driver.o chrome_host.o chrome_io.o chrome_mode.o
 obj-m += chromefb.o
