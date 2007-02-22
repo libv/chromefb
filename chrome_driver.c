@@ -16,7 +16,6 @@
  *
  */
 
-#include <linux/config.h>
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -207,6 +206,9 @@ chrome_check_var(struct fb_var_screeninfo *mode, struct fb_info *fb_info)
 	int ret;
 
 	DBG(__func__);
+
+        printk("Checking %dx%d@%dbpp at %ldkHz\n", mode->xres, mode->yres,
+               mode->bits_per_pixel, PICOS2KHZ(mode->pixclock));
 
 	/* bpp */
 	switch (mode->bits_per_pixel) {
