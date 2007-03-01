@@ -55,6 +55,8 @@
  * Stores the full textmode state.
  */
 struct chrome_state {
+        int stored;
+
         /* VGA registers + extensions */
         unsigned char CR[0xA2];
         unsigned char SR[0x1D];
@@ -72,6 +74,14 @@ struct chrome_state {
                 unsigned char green;
                 unsigned char blue;
         } palette[0x100];
+
+        /* restore for IO enable. */
+        unsigned char io_enable;
+        unsigned char io_misc;
+        unsigned char io_sr10, io_sr1a;
+
+        /* restore for FB enable. */
+        unsigned char fb_sr02, fb_sr04, fb_sr1a;
 };
 
 /*

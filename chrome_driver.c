@@ -42,8 +42,6 @@ chrome_textmode_store(struct chrome_info *info)
 
 	DBG(__func__);
 
-	memset(state, 0, sizeof(struct chrome_state));
-
 	/* Don't bother with a synchronous reset, we're not touching anything */
 
 	/* CR registers */
@@ -89,6 +87,8 @@ chrome_textmode_store(struct chrome_info *info)
 		state->palette[i].green = chrome_vga_dac_read(info);
 		state->palette[i].blue = chrome_vga_dac_read(info);
 	}
+
+        state->stored = 1;
 }
 
 /*
@@ -108,6 +108,7 @@ chrome_textmode_restore(struct chrome_info *info)
 	/* CR registers */
 	for (i = 0x00; i < 0x1E; i++)
 		chrome_vga_cr_write(info, i, state->CR[i]);
+
 	/* 0x1E - 0x32: unused */
 	for (i = 0x33; i < 0xA3; i++)
 		chrome_vga_cr_write(info, i, state->CR[i]);
@@ -157,14 +158,8 @@ static int
 chrome_open(struct fb_info *fb_info, int user)
 {
 	struct chrome_info *info = (struct chrome_info *) fb_info;
-	int count;
 
 	DBG(__func__);
-
-	count = atomic_read(&info->fb_ref_count);
-
-	if (!count)
-		chrome_textmode_store(info);
 
 	atomic_inc(&info->fb_ref_count);
 
@@ -178,17 +173,11 @@ static int
 chrome_release(struct fb_info *fb_info, int user)
 {
 	struct chrome_info *info = (struct chrome_info *) fb_info;
-	int count;
 
 	DBG(__func__);
 
-	count = atomic_read(&info->fb_ref_count);
-
-	if (!count)
+	if (!atomic_read(&info->fb_ref_count))
 		return -EINVAL;
-
-	if (count == 1)
-		chrome_textmode_restore(info);
 
 	atomic_dec(&info->fb_ref_count);
 
@@ -537,17 +526,24 @@ chrome_io_init(struct chrome_info *info)
 		return -ENODEV;
 	}
 
+        printk(KERN_DEBUG "%s: Mapping 0x%08X->0x%08X at 0x%08X\n",
+               __func__, iobase, ioend, (int) info->iobase);
+
 	/* enable VGA */
+        info->state.io_enable = chrome_vga_enable_read(info);
 	chrome_vga_enable_mask(info, 0x01, 0x01);
 
 	/* set CR to 0x3Dx */
+        info->state.io_misc = chrome_vga_misc_read(info);
 	chrome_vga_misc_mask(info, 0x01, 0x01);
 
 	/* unlock extended io */
+        info->state.io_sr10 = chrome_vga_seq_read(info, 0x10);
 	chrome_vga_seq_write(info, 0x10, 0x01);
 
 	/* enable MMIO for primary */
-	chrome_vga_seq_mask(info, 0x1A, 0x60, 0x60);
+        info->state.io_sr1a = chrome_vga_seq_read(info, 0x1A);
+	chrome_vga_seq_mask(info, 0x1A, 0x06, 0x06);
 
 	/* Set up the fix structure -- why is this so mangled? */
 	fix->mmio_start = iobase;
@@ -567,6 +563,12 @@ chrome_io_release(struct chrome_info *info)
 	unsigned int iobase, ioend;
 
 	DBG(__func__);
+
+        /* restore IO registers */
+        chrome_vga_seq_mask(info, 0x1A, info->state.io_sr1a, 0x06);
+        chrome_vga_seq_write(info, 0x10, info->state.io_sr10);
+        chrome_vga_misc_mask(info, info->state.io_misc, 0x01);
+	chrome_vga_enable_mask(info, info->state.io_enable, 0x01);
 
 	iobase = info->pci_dev->resource[1].start;
 	ioend = info->pci_dev->resource[1].end;
@@ -604,18 +606,24 @@ chrome_fb_init(struct chrome_info *info)
 		return -ENODEV;
 	}
 
+        printk(KERN_DEBUG "%s: Mapping 0x%08X (0x%08X) at 0x%08X\n",
+               __func__, info->fb_physical, size, (int) info->fbbase);
+
 	/* Set up the fix structure -- why is this so mangled? */
 	fix->smem_start = info->fb_physical;
 	fix->smem_len = size;
         info->fb_info.screen_base = info->fbbase;
 
 	/* enable writing to all VGA planes */
+        info->state.fb_sr02 = chrome_vga_seq_read(info, 0x02);
 	chrome_vga_seq_write(info, 0x02, 0x0F);
 
 	/* enable extended VGA memory */
+        info->state.fb_sr04 = chrome_vga_seq_read(info, 0x04);
 	chrome_vga_seq_write(info, 0x04, 0x0E);
 
 	/* enable extended memory access */
+        info->state.fb_sr1a = chrome_vga_seq_read(info, 0x1A);
 	chrome_vga_seq_mask(info, 0x1A, 0x08, 0x08);
 
 	return 0;
@@ -631,6 +639,10 @@ chrome_fb_release(struct chrome_info *info)
 	struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
 
 	DBG(__func__);
+
+        chrome_vga_seq_mask(info, 0x1A, info->state.fb_sr1a, 0x08);
+        chrome_vga_seq_write(info, 0x04, info->state.fb_sr04);
+	chrome_vga_seq_write(info, 0x02, info->state.fb_sr02);
 
 	iounmap(info->fbbase);
 	release_mem_region(info->fb_physical, info->fbsize *1024);
@@ -673,6 +685,9 @@ chrome_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	err = chrome_fb_init(info);
 	if (err)
 		goto cleanup_io;
+
+        /* Store state */
+        chrome_textmode_store(info);
 
 	{ /* fractured api */
 		struct fb_fix_screeninfo *fix = &(info->fb_info.fix);
@@ -729,6 +744,9 @@ chrome_remove(struct pci_dev *dev)
 	DBG(__func__);
 
 	if (info) {
+                if (info->state.stored)
+                        chrome_textmode_restore(info);
+
 		if (info->fbbase)
 			chrome_fb_release(info);
 
