@@ -1,0 +1,13 @@
+Abandoned fb driver for VIA Unichrome devices.
+
+This was written during the first phase of absolute disillusionment with 
+X.org, as after years of being the only person driving the topic of 
+modesetting forwards, getting either ignored, being told off, or even 
+forked away from, people were now preaching modesetting everywhere, and 
+conveniently forgetting where it all stemmed from.
+
+It was abandoned in april 2007, as Egbert Eich, one of the few remaining 
+display driver developers of the Xfree86 days, started the process of 
+hiring me into SuSE Linux, and i had to juggle this process with 
+finishing a college degree. And as soon as i joined SuSE, we freed ATI, 
+and almost everything unichrome went on ice for nearly 2 years.
